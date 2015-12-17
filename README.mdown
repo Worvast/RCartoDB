@@ -1,0 +1,277 @@
+## This package provides an R wrapper to the cartodb.com APIs.
+
+For more information on the these APIs see http://developers.cartodb.com/
+
+<img src="http://i.imgur.com/x3SWS.png" alt="" title="Hosted by imgur.com" width="900px" />
+
+## Why use CartoDB with R?
+
+- All the power of PostgreSQL/PostGIS without the need to install all the libraries locally
+
+- No, seriously, power! Make queries on huge datasets only grabbing the bits and pieces formatted just as you need them
+
+- Database simplicity, turn CartoDB tables directly into data.frames without any hassle
+
+- Portability! Now share your code with collaborators without having to transfer databases etc
+
+### Contact
+
+Andrew Hill
+
+- Email: andrew@vizzuality.com
+ 
+### Requirements
+
+The CartoDB R package requires the following external packages
+
+- RCurl
+   
+- RJSONIO
+      
+### Suggested
+
+Using rgeos can greatly improve mapping capability in R. It also plays nice with CartoDB, as queries accept geomAs='WKT', which can be directly used in rgeos.
+
+- rgeos
+
+### Installation from source
+       
+To install this package from the source code available here
+
+- download the file
+    
+- change directory to the location downloaded
+            
+`> install.packages("CartoDB_1.4.tar.gz", repos=NULL, type="source")`
+
+
+### Installation using devtools
+
+- alternatively you can install straight from GitHub using <a href="https://github.com/hadley/devtools">devtools</a> (untested, please let me know!)
+
+`> install_github("cartodb-r", "Vizzuality")`
+
+### Methods
+
+**Connecting**
+
+`cartodb("your-account-name", api.key="optional-key-for-writes")`
+
+- *api.key* enables writes and also lets you read from private tables
+
+**Testing a connection**
+
+`cartodb.test()`
+
+**Getting table data**
+
+`cartodb.collection("table_name")`
+
+**Getting select columns**
+
+`cartodb.collection("table_name", columns=c("column1","column2"))`
+
+**Other parameters for cartodb.collection**
+
+*geomAs*
+
+- String type of geometry to return with records, doesn't work with **sql**
+
+- default = **NULL**, same as "**WKB**" and "**the_geom**"
+
+- "**XY**", returns the_geom_x and the_geom_y
+
+- "**GeoJSON**", return the_geom as GeoJSON text
+
+- "**WKT**", returns the_geom as Well-known text (for rgeos)
+
+*omitNull*
+
+- Boolean if TRUE omits all records with NULL the_geom, doesn't work with **sql**
+
+- default = FALSE
+
+*limit*
+
+- Integer limit to number of records returned, doesn't work with **sql**
+
+- default = NULL
+
+*asJson*
+
+- Boolean whether to convert your data from a JSON string to data.frame
+
+- default = TRUE
+
+*urlOnly*
+
+- Boolean whether to only create and return the URL
+
+- default = FALSE
+
+*sql*
+
+- String of SQL to query records directly
+
+- default = NULL
+
+- Overrides all other parameters except **asJson**
+
+- example: `cartodb.collection(sql = "SELECT column1 FROM your_table")`
+
+### Examples for CartoDB in R
+
+Set up your first read-only CartoDB connection
+
+```R
+# Import required packages
+library(RCurl)
+library(RJSONIO)
+library(CartoDB)
+
+# Setup your connection
+cartodb_account_name = "examples"
+cartodb(cartodb_account_name)
+
+# You can quickly test that your connection works
+cartodb.test()
+# #     success
+# #  1    TRUE
+```
+
+Create a new data.frame out of one of your tables
+
+```R
+# Setup your connection
+cartodb_account_name = "examples"
+cartodb(cartodb_account_name)
+
+# Download the first 10 records of a table with the_geom transformed to X,Y coordinates
+table_name <- "monarch"
+data <- cartodb.collection(table_name, geomAs="XY", limit=10)
+```
+
+Calculate the upper half of a distance matrix for one of your tables, based on meters on a spherical geometry
+
+```R
+# Setup your connection
+cartodb_account_name = "examples"
+cartodb(cartodb_account_name)
+
+# Download a the pairwise distances for all records in your table.
+table_name <- "nuclear_power_plants"
+data <- cartodb.spatial.dm(table_name)
+```
+
+A very simple map of butterflies in Mexico
+
+```R
+library(RCurl)
+library(RJSONIO)
+library(CartoDB)
+library(maps)
+
+# Setup your connection
+cartodb_account_name = "examples"
+cartodb(cartodb_account_name)
+
+# Grab your data
+data <- cartodb.collection("monarch", geomAs="XY", omitNull=TRUE)
+
+# Create a very basic map
+map(regions="mexico", lwd=0.05, lty=1)
+points(data$the_geom_x, data$the_geom_y, col="red")
+title("Monarch butterfly records in GBIF -- Mexico Region")
+```
+
+Get a specific tile from a table
+
+```R
+library(RCurl)
+library(RJSONIO)
+library(CartoDB)
+
+img <- readPNG(cartodb.tiles.tile("california_zips",41,100,8))
+r = as.raster(img[,,1:3])
+r[img[,,4] == 0] = "white"
+
+plot(0:1,0:1,type="n",xlab='',ylab='',axes=FALSE, frame.plot=FALSE)
+rasterImage(r,0,0,1,1)
+```
+
+The below is a bit more advanced method for plotting geospatial data onto a properly projected map. This requires a few extra external libraries, but the results can be very useful.
+
+<img src="http://i.imgur.com/CuOT3.png" width="900px"/>
+
+```R
+library(rgdal)
+library(maptools)
+library(RCurl)
+library(RJSONIO)
+library(CartoDB)
+
+# Setup our CartoDB Connection
+cartodb_account_name = "viz2"; 
+cartodb(cartodb_account_name)
+
+# CartoDB the_geom columns are always the following proj string
+crs <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+
+# Get OSM polygons for Riyadh
+polyUrl <- cartodb.collection("riyadh_osm_polygon", columns=c("cartodb_id","the_geom"), omitNull=TRUE,method="GeoJSON", urlOnly=TRUE)
+riyadh.poly<-readOGR(polyUrl,p4s=crs,layer = 'OGRGeoJSON')
+
+# Get OSM roads for Riyadh
+roadUrl <- cartodb.collection("riyadh_osm_roads", columns=c("cartodb_id","the_geom"), omitNull=TRUE,method="GeoJSON", urlOnly=TRUE)
+riyadh.roads<-readOGR(roadUrl,p4s=crs,layer = 'OGRGeoJSON')
+
+# Get OSM railways for Riyadh
+railUrl <- cartodb.collection(sql="SELECT cartodb_id, the_geom FROM riyadh_osm_line WHERE railway IS NOT NULL",method="GeoJSON",urlOnly=TRUE)
+riyadh.rails<-readOGR(railUrl,p4s=crs,layer = 'OGRGeoJSON')
+
+# Plot the polygons and roads on a small map
+plot(riyadh.poly,axes=TRUE, border="gray",col="#A2CD5A",bg="white")
+lines(riyadh.roads, col="#3a3a3a", lwd=1)
+lines(riyadh.rails, col="burlywood3", lwd=3)
+```
+
+
+### Writing data to CartoDB using R
+
+To write data to your CartoDB tables, you will need to get and API Key, you can find it by clicking "Your api keys" in your CartoDB dashboard.
+
+Below, see how we insert a new record into CartoDB and then update some values in that record.
+
+```R
+library(RCurl)
+library(RJSONIO)
+library(CartoDB)
+
+# Setup a CartoDB connection with authenticated API Key access
+your_api_key = "{your_api_key}"
+cartodb_account_name = "examples"; 
+cartodb(cartodb_account_name, api.key=your_api_key)
+
+# Insert a new row into a table called us_cities that has columns name, latitude, and longitude. Inserts return the cartodb_id of the newly created record
+cartodb_id <- cartodb.row.insert(name="us_cities",columns=list("name","latitude","longitude"),values=list("New York",40.714,-74.006))
+
+# You could perform this in the same insert, but to demonstrate updates, here we will turn the coordinates into a geometry with an update
+cartodb.row.update(name="us_cities",cartodb_id=cartodb_id,columns=list("the_geom"),values=list("ST_SetSRID(ST_Point(longitude,latitude),4326) "),quoteChars=FALSE)
+
+# Now we can get the full record we just created
+record <- cartodb.row.get(name="us_cities",cartodb_id=cartodb_id)
+record
+```
+
+### TODOs
+
+- add instructions on putting API keys in ENV
+
+- Add direct row (data.frame) -> insert or -> update methods. E.g. cartodb.row.update(row=my.data.frame), cartodb.row.insert(row=my.data.frame)
+
+- Set remote map style method?
+
+- Move to an external SQL package for handling R types -> SQL types for insert statements
+
+
+
