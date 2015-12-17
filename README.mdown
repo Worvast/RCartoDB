@@ -1,3 +1,10 @@
+## Disclaimer:
+
+This repository start as fork detached from the following project: https://github.com/Vizzuality/cartodb-r
+
+
+Due to the inactivity of the projects i decided to separate the development in a separate Github project, why not forked? Because fork apparently do not appear in searches and if anyone has problems with outdated versions will make it more difficult to find.
+
 ## This package provides an R wrapper to the cartodb.com APIs.
 
 For more information on the these APIs see http://developers.cartodb.com/
@@ -14,11 +21,12 @@ For more information on the these APIs see http://developers.cartodb.com/
 
 - Portability! Now share your code with collaborators without having to transfer databases etc
 
-### Contact
+### Original Contact
 
 Andrew Hill
 
 - Email: andrew@vizzuality.com
+
  
 ### Requirements
 
