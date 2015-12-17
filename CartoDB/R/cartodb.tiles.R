@@ -1,6 +1,6 @@
 cartodb.tiles.base <-
 function() {
-    return( paste( "http://",.CartoDB$data$account.name,.CartoDB$data$api.tile,sep='' ) )
+    return( paste( "http://",.CartoDB$data$api.tile,sep='' ) )
 }
 
 cartodb.tiles.tile <-

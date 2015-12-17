@@ -25,7 +25,6 @@ Andrew Hill
 The CartoDB R package requires the following external packages
 
 - RCurl
-   
 - RJSONIO
       
 ### Suggested
